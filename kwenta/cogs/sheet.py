@@ -1,9 +1,11 @@
+import string
+
 from discord.ext import commands
 from google.oauth2 import service_account
 from googleapiclient import discovery
 from tabulate import tabulate
 
-from ..config import BASE_DIR, SHEET_ID
+from ..config import BASE_DIR, SHEET_ID, TEST_SHEET_ID
 
 
 class GSheet(commands.Cog):
@@ -29,6 +31,53 @@ class GSheet(commands.Cog):
             f"```{tabulate(values, headers=headers)}```\n**Google Sheets link:** <https://docs.google.com/spreadsheets/d/{SHEET_ID}>"
         )
 
+    @sheet_group.command(aliases=["addgroup"])
+    async def add_group(self, ctx: commands.Context, *name: str):
+        name = " ".join(name)
+        data = [[], [name.upper(), "", "", ""]]
+        result = (
+            self.sheet.values()
+            .append(
+                spreadsheetId=SHEET_ID,
+                valueInputOption="USER_ENTERED",
+                body={"values": data},
+                range="BOT_TEST!A:D",
+            )
+            .execute()
+        )
+        updates = result.get("updates")
+        updated_range = updates.get("updatedRange")
+        usheet, urange = updated_range.split("!")
+        start_range, end_range = urange.split(":")
+        requests = [
+            {
+                "updateCells": {
+                    "fields": "userEnteredFormat",
+                    "rows": [
+                        {
+                            "values": [
+                                {
+                                    "userEnteredFormat": {
+                                        "backgroundColor": {"red": 0.5, "green": 0.5, "blue": 0.5},
+                                        "textFormat": {"bold": True},
+                                    },
+                                }
+                            ]
+                        }
+                    ],
+                    "range": {
+                        "sheetId": TEST_SHEET_ID,
+                        "startColumnIndex": string.ascii_uppercase.index(start_range[0]),
+                        "startRowIndex": int(start_range[1:]),
+                        "endColumnIndex": string.ascii_uppercase.index("D"),
+                        "endRowIndex": int(end_range[1:]),
+                    },
+                },
+            },
+        ]
+        self.sheet.batchUpdate(spreadsheetId=SHEET_ID, body={"requests": requests}).execute()
+        await ctx.send(f"Added new group **{name.upper()}**")
+
     @sheet_group.command()
     async def add(
         self,
@@ -53,3 +102,7 @@ class GSheet(commands.Cog):
         )
         updates = result.get("updates")
         await ctx.send(f"Appended {(updates.get('updatedCells'))} cells across {updates.get('updatedRows')} rows.")
+
+    @sheet_group.command()
+    async def batch(self, ctx: commands.Context, *args: str):
+        pass

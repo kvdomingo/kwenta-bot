@@ -13,12 +13,16 @@ def make_dotenv():
     env = template.render(
         DISCORD_TOKEN=get_secret_string("DISCORD_TOKEN"),
         SHEET_ID=get_secret_string("SHEET_ID"),
-        GOOGLE_API_KEY=get_secret_string("GOOGLE_API_KEY"),
+        ENTITY_IDS=get_secret_string("ENTITY_IDS"),
     )
     with open(BASE_DIR / ".env", "w+") as f:
         f.write(env)
-
     logger.info(".env ok")
+
+    credentials = get_secret_string("CREDENTIALS_JSON")
+    with open(BASE_DIR / "credentials.json", "w+") as f:
+        f.write(credentials)
+    logger.info("credentials.json ok")
 
 
 if __name__ == "__main__":
